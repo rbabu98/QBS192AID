@@ -1,0 +1,19 @@
+import pandas as pd
+!pip install tensorflow
+!pip install -q kaggle
+
+from google.colab import files
+#key = {"username":"","key":""}
+
+uploaded = files.upload()
+
+!mkdir ~/.kaggle
+!cp kaggle.json ~/.kaggle/
+
+!chmod 600 ~/.kaggle/kaggle.json
+!kaggle datasets list
+
+!kaggle competitions download -c 'diabetic-retinopathy-detection'
+
+! mkdir R_data
+! unzip R_data.zip -d R_data
