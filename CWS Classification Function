@@ -1,0 +1,70 @@
+def CWS_articulation(image):
+  
+  # Initializing the presence of cotton wool spots
+  CWS_presence = 0 
+
+  # Increasing contrast
+  alpha = 1.5
+  beta = 0
+  image = cv2.convertScaleAbs(np.float32(image), alpha=alpha, beta=beta)
+
+  # Converting Image to grayscale 
+  gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+  # Smoothening Image to reduce background noise
+  smoothened = cv2.GaussianBlur(gray, (11, 11), 0)
+
+  # Brightest regions in the image are seen by implementing thresholds 
+  # Here, any pixels with a value >= 200 are set to 255 (white). On the other hand, values < 200 are set to 0 (black).
+  threshold = cv2.threshold(smoothened, 200, 255, cv2.THRESH_BINARY)[1]
+
+  # More background noise is removed through a series of dilations and erosions
+  threshold = cv2.erode(threshold, None, iterations=2)
+  threshold = cv2.dilate(threshold, None, iterations=4)
+
+  # Performing connected-component analysis
+  # Analysis is performed using the scikit-image library. 
+  # The labels variable returned from measure.label has the exact same dimensions as the threshold image
+  # Here, the labels store a unique integer for each blob in threshold. 
+  labels = measure.label(threshold, neighbors=8, background=0)
+
+  # initialize mask to subset only the large blobs
+  mask = np.zeros(threshold.shape, dtype="uint8")
+
+  # loop over the unique labels
+  for label in np.unique(labels):
+    # When the label = 0, it is apparent that the background region is being examined and can thus be ignored
+    if label == 0:
+      continue
+    
+    # otherwise, construct the label mask and count the number of pixels 
+    labelMask = np.zeros(threshold.shape, dtype="uint8")
+    labelMask[labels == label] = 255
+    numPixels = cv2.countNonZero(labelMask)
+    
+    # if the number of pixels in the component is sufficiently large, then add it to our mask of "large blobs"
+    if numPixels > 300:
+      mask = cv2.add(mask, labelMask)
+
+  # find the contours in the mask, then sort them from left to right
+
+  cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+  cnts = imutils.grab_contours(cnts)
+
+  # loop over the contours
+  for (i, c) in enumerate(cnts):
+    # draw the bright spot on the image
+    (x, y, w, h) = cv2.boundingRect(c)
+    ((cX, cY), radius) = cv2.minEnclosingCircle(c)
+    cv2.circle(image, (int(cX), int(cY)), int(radius),(0, 0, 255), 3)
+    cv2.putText(image, "#{}".format(i + 1), (x, y - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
+
+  # show the output image
+  plt.imshow(image)
+  
+  if len(cnts) > 15: 
+    CWS_presence = 1
+  
+  return CWS_presence
+
+CWS_articulation(input_image)
